@@ -51,7 +51,7 @@ std::vector<MovingPixel> OpticalFlow::getMovingPixels(cv::Mat prev, cv::Mat cur)
 	return movingPixels;
 }
 
-void OpticalFlow::getFlowCart(cv::Mat prev, cv::Mat cur, cv::Mat rFlow, cv::Mat thetaFlow)
+void OpticalFlow::getFlowCart(const cv::Mat & prev, const cv::Mat & cur, cv::Mat & rFlow, cv::Mat & thetaFlow)
 {
 	cv::Mat prevPolar = cartToPolar(prev);
 	cv::Mat curPolar = cartToPolar(cur);
@@ -104,7 +104,7 @@ int OpticalFlow::getMaxR()
 	return maxR;
 }
 
-void OpticalFlow::getFlow(cv::Mat prevPolar, cv::Mat curPolar, cv::Mat rFlow, cv::Mat thetaFlow)
+void OpticalFlow::getFlow(const cv::Mat & prevPolar, const cv::Mat & curPolar, cv::Mat & rFlow, cv::Mat & thetaFlow)
 {
 	cv::Mat prevPolarGray;
 	cv::cvtColor(prevPolar, prevPolarGray, cv::COLOR_BGR2GRAY);

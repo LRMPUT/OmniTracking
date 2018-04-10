@@ -30,6 +30,8 @@ private:
 					cv::Mat thetaFlowImg,
 					const Particle &part);
 
+	void disturbParticles();
+
 	void redraw();
 
 

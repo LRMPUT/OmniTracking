@@ -84,6 +84,8 @@ int main() {
 
 	pf.initFilter(frame1, frame2, cv::Rect(p1, p2));
 
+	cv::Mat prev = frame2;
+
 	cv::namedWindow("image cart", 1);
 	cv::namedWindow("image polar", 2);
 	for (;;)
@@ -95,9 +97,12 @@ int main() {
 
 			cv::imshow("image cart", frame);
 			cv::imshow("image polar", polar);
+
+			pf.processImage(prev, frame);
 			if (cv::waitKey(30) >= 0) {
 				break;
 			}
+			prev = frame;
 		}
 		else {
 			break;
