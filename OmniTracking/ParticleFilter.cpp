@@ -57,6 +57,8 @@ Particle ParticleFilter::processImage(cv::Mat prev, cv::Mat cur)
 	double meanX = 0;
 	double meanY = 0;
 	for (auto it = particles.begin(); it != particles.end(); ++it) {
+		//cout << "r = " << it->r << ", theta = " << it->theta << endl;
+
 		int xVal = opticalFlow.xCoord(it->r, it->theta);
 		int yVal = opticalFlow.yCoord(it->r, it->theta);
 		meanX += xVal;
@@ -99,7 +101,7 @@ Particle ParticleFilter::processImage(cv::Mat prev, cv::Mat cur)
 		cv::Mat vis = opticalFlow.cartToPolar(cur);
 
 		for (auto it = particles.begin(); it != particles.end(); ++it) {
-			cv::circle(vis, cv::Point(meanR, meanTheta), 4, cv::Scalar(255, 0, 0));
+			cv::circle(vis, cv::Point(it->r, it->theta), 4, cv::Scalar(255, 0, 0));
 		}
 
 		cv::rectangle(vis, obj, cv::Scalar(0, 0, 255));
@@ -158,7 +160,7 @@ void ParticleFilter::disturbParticles()
 
 		newR = max(obj.width/2, newR);
 		newR = min(opticalFlow.getMaxR() - (obj.width + 1) / 2, newR);
-		newTheta %= 360;
+		newTheta = (newTheta + 360) % 360;
 
 		it->r = newR;
 		it->theta = newTheta;

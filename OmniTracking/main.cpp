@@ -49,6 +49,12 @@ int main() {
 	}
 
 	cv::Mat frame1, frame2;
+
+	int framesToSkip = 50;
+	for (int i = 0; i < framesToSkip; ++i) {
+		cap >> frame1;
+	}
+
 	cap >> frame1;
 	cap >> frame2;
 	
