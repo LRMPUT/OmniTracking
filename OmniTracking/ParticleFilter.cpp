@@ -12,7 +12,7 @@ ParticleFilter::ParticleFilter(int iw, int ih, int icx, int icy, int inp)
 	gen.seed(seed);
 }
 
-void ParticleFilter::initFilter(cv::Mat prev, cv::Mat cur, cv::Rect iobj)
+bool ParticleFilter::initFilter(cv::Mat prev, cv::Mat cur, cv::Rect iobj)
 {
 	uniform_int_distribution<int> uniDistTheta(0, 360 - 1);
 	uniform_int_distribution<int> uniDistR(0, opticalFlow.getMaxR());
@@ -28,9 +28,28 @@ void ParticleFilter::initFilter(cv::Mat prev, cv::Mat cur, cv::Rect iobj)
 	cv::Mat rFlow, thetaFlow;
 	opticalFlow.getFlowCart(prev, cur, rFlow, thetaFlow);
 
-	obj = iobj;
-	rFlowObj = rFlow(obj).clone();
-	thetaFlowObj = thetaFlow(obj).clone();
+	//double minValR, maxValR;
+	//cv::minMaxIdx(abs(rFlow), &minValR, &maxValR);
+	//cout << "obj minValR = " << minValR << ", maxValR = " << maxValR << endl;
+	//double minValTheta, maxValTheta;
+	//cv::minMaxIdx(abs(thetaFlow), &minValTheta, &maxValTheta);
+	//cout << "obj minValTheta = " << minValTheta << ", maxValTheta = " << maxValTheta << endl;
+
+	cv::Scalar meanR = cv::mean(abs(rFlow));
+	cv::Scalar meanTheta = cv::mean(abs(thetaFlow));
+	cout << "meanR = " << meanR << " meanTheta = " << meanTheta << endl;
+
+	if (meanR(0) > 0.05 && meanTheta(0) > 0.05) {
+		obj = iobj;
+		rFlowObj = rFlow(obj).clone();
+		thetaFlowObj = thetaFlow(obj).clone();
+
+		return true;
+	}
+	else {
+		return false;
+	}
+
 }
 
 Particle ParticleFilter::processImage(cv::Mat prev, cv::Mat cur)
@@ -38,79 +57,121 @@ Particle ParticleFilter::processImage(cv::Mat prev, cv::Mat cur)
 	cv::Mat rFlow, thetaFlow;
 	opticalFlow.getFlowCart(prev, cur, rFlow, thetaFlow);
 
-	disturbParticles();
+	//double minValR, maxValR;
+	//cv::minMaxIdx(abs(rFlow), &minValR, &maxValR);
+	//cout << "minValR = " << minValR << ", maxValR = " << maxValR << endl;
+	//double minValTheta, maxValTheta;
+	//cv::minMaxIdx(abs(thetaFlow), &minValTheta, &maxValTheta);
+	//cout << "minValTheta = " << minValTheta << ", maxValTheta = " << maxValTheta << endl;
 
-	Particle bestParticle;
-	float bestWeight = 0;
-	for (auto it = particles.begin(); it != particles.end(); ++it) {
-		float w = calcWeight(rFlowObj, thetaFlowObj, rFlow, thetaFlow, *it);
-		it->weight = w;
-		if (w > bestWeight) {
-			bestWeight = w;
-			bestParticle = *it;
-		}
-	}
+	cv::Scalar meanR = cv::mean(abs(rFlow));
+	cv::Scalar meanTheta = cv::mean(abs(thetaFlow));
+	cout << "meanR = " << meanR << " meanTheta = " << meanTheta << endl;
 
-	redraw();
+	if (meanR(0) > 0.05 && meanTheta(0) > 0.05) {
+		disturbParticles();
 
-	// mean
-	double meanX = 0;
-	double meanY = 0;
-	for (auto it = particles.begin(); it != particles.end(); ++it) {
-		//cout << "r = " << it->r << ", theta = " << it->theta << endl;
-
-		int xVal = opticalFlow.xCoord(it->r, it->theta);
-		int yVal = opticalFlow.yCoord(it->r, it->theta);
-		meanX += xVal;
-		meanY += yVal;
-	}
-	meanX /= particles.size();
-	meanY /= particles.size();
-	// variance
-	double varX = 0;
-	double varY = 0;
-	for (auto it = particles.begin(); it != particles.end(); ++it) {
-		int xVal = opticalFlow.xCoord(it->r, it->theta);
-		int yVal = opticalFlow.yCoord(it->r, it->theta);
-		varX += (xVal - meanX) * (xVal - meanX);
-		varY += (yVal - meanY) * (yVal - meanY);
-	}
-	varX /= particles.size();
-	varY /= particles.size();
-	double meanR = opticalFlow.rCoord(meanX, meanY);
-	double meanTheta = opticalFlow.thetaCoord(meanX, meanY);
-
-	cout << "meanX = " << meanX << endl;
-	cout << "meanY = " << meanY << endl;
-	cout << "varX = " << varX << endl;
-	cout << "varY = " << varY << endl;
-
-	// if filter has converged then update reference object
-	if (varX < 100 && varY < 100) {
-		int objRSize = obj.width;
-		int objThetaSize = obj.height;
-		obj = cv::Rect(meanR - objRSize / 2,
-			meanTheta - objThetaSize / 2,
-			objRSize,
-			objThetaSize);
-		rFlowObj = rFlow(obj).clone();
-		thetaFlowObj = thetaFlow(obj).clone();
-	}
-
-	{
-		cv::Mat vis = opticalFlow.cartToPolar(cur);
-
+		Particle bestParticle;
+		float bestWeight = 0;
 		for (auto it = particles.begin(); it != particles.end(); ++it) {
-			cv::circle(vis, cv::Point(it->r, it->theta), 4, cv::Scalar(255, 0, 0));
+			float w = calcWeight(rFlowObj, thetaFlowObj, rFlow, thetaFlow, *it);
+			it->weight = w;
+			if (w > bestWeight) {
+				bestWeight = w;
+				bestParticle = *it;
+			}
 		}
 
-		cv::rectangle(vis, obj, cv::Scalar(0, 0, 255));
 
-		cv::imshow("vis", vis);
+		//for (auto it = particles.begin(); it != particles.end(); ++it) {
 
-		cv::waitKey();
+		//	cv::Mat vis = opticalFlow.cartToPolar(cur);
+
+		//	cv::circle(vis, cv::Point(it->r, it->theta), 4, cv::Scalar(255, 0, 0));
+
+		//	cout << "w = " << it->weight << endl;
+
+		//	cv::imshow("rFlowObj", rFlowObj);
+		//	cv::imshow("thetaFlowObj", thetaFlowObj);
+		//	cv::imshow("rFlow", rFlow);
+		//	cv::imshow("thetaFlow", thetaFlow);
+
+		//	cv::imshow("vis", vis);
+
+		//	cv::waitKey();
+		//}
+
+
+		cv::imshow("rFlow", rFlow);
+		cv::imshow("thetaFlow", thetaFlow);
+		cv::imshow("rFlowObj", rFlowObj);
+		cv::imshow("thetaFlowObj", thetaFlowObj);
+
+		redraw();
+
+		// mean
+		double meanX = 0;
+		double meanY = 0;
+		for (auto it = particles.begin(); it != particles.end(); ++it) {
+			//cout << "r = " << it->r << ", theta = " << it->theta << endl;
+
+			int xVal = opticalFlow.xCoord(it->r, it->theta);
+			int yVal = opticalFlow.yCoord(it->r, it->theta);
+			meanX += xVal;
+			meanY += yVal;
+		}
+		meanX /= particles.size();
+		meanY /= particles.size();
+		// variance
+		double varX = 0;
+		double varY = 0;
+		for (auto it = particles.begin(); it != particles.end(); ++it) {
+			int xVal = opticalFlow.xCoord(it->r, it->theta);
+			int yVal = opticalFlow.yCoord(it->r, it->theta);
+			varX += (xVal - meanX) * (xVal - meanX);
+			varY += (yVal - meanY) * (yVal - meanY);
+		}
+		varX /= particles.size();
+		varY /= particles.size();
+		double meanR = opticalFlow.rCoord(meanX, meanY);
+		double meanTheta = opticalFlow.thetaCoord(meanX, meanY);
+
+		cout << "meanX = " << meanX << endl;
+		cout << "meanY = " << meanY << endl;
+		cout << "varX = " << varX << endl;
+		cout << "varY = " << varY << endl;
+
+		// if filter has converged then update reference object
+		if (varX < 100 && varY < 100) {
+			int objRSize = obj.width;
+			int objThetaSize = obj.height;
+			obj = cv::Rect(meanR - objRSize / 2,
+				meanTheta - objThetaSize / 2,
+				objRSize,
+				objThetaSize);
+			rFlowObj = rFlow(obj).clone();
+			thetaFlowObj = thetaFlow(obj).clone();
+		}
+
+		{
+			cv::Mat vis = opticalFlow.cartToPolar(cur);
+
+			for (auto it = particles.begin(); it != particles.end(); ++it) {
+				cv::circle(vis, cv::Point(it->r, it->theta), 4, cv::Scalar(255, 0, 0));
+			}
+
+			cv::rectangle(vis, obj, cv::Scalar(0, 0, 255));
+
+			cv::imshow("vis", vis);
+
+			cv::waitKey();
+		}
+
+		return Particle{ (int)meanTheta, (int)meanR, 1.0 };
 	}
-	return Particle{ (int)meanTheta, (int)meanR, 1.0 };
+	else {
+		return Particle{ 0, 0, -1.0 };
+	}
 }
 
 cv::Mat ParticleFilter::getPolar(cv::Mat img)

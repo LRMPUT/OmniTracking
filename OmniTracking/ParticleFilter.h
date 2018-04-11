@@ -18,7 +18,7 @@ class ParticleFilter
 public:
 	ParticleFilter(int iw, int ih, int icx, int icy, int inp);
 	
-	void initFilter(cv::Mat prev, cv::Mat cur, cv::Rect iobj);
+	bool initFilter(cv::Mat prev, cv::Mat cur, cv::Rect iobj);
 
 	Particle processImage(cv::Mat prev, cv::Mat cur);
 

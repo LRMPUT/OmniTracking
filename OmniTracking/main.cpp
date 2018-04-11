@@ -42,7 +42,7 @@ void mouseHandler(int event, int x, int y, int flags, void* param) {
 int main() {
 	
 
-	cv::VideoCapture cap("movie.avi"); // open the default camera
+	cv::VideoCapture cap("zyrafa.avi"); // open the default camera
 	if (!cap.isOpened()) {
 		cout << "video not opened" << endl;
 		return -1;
@@ -50,7 +50,7 @@ int main() {
 
 	cv::Mat frame1, frame2;
 
-	int framesToSkip = 50;
+	int framesToSkip = 51;
 	for (int i = 0; i < framesToSkip; ++i) {
 		cap >> frame1;
 	}
@@ -88,7 +88,10 @@ int main() {
 	cout << "p1 = " << p1 << endl;
 	cout << "p2 = " << p2 << endl;
 
-	pf.initFilter(frame1, frame2, cv::Rect(p1, p2));
+	while (!pf.initFilter(frame1, frame2, cv::Rect(p1, p2))) {
+		cap >> frame1;
+		cap >> frame2;
+	}
 
 	cv::Mat prev = frame2;
 
