@@ -117,8 +117,8 @@ void OpticalFlow::getFlow(const cv::Mat & prevPolar, const cv::Mat & curPolar, c
 	thetaFlow = cv::Mat(flow.size(), CV_32FC1);
 	for (int r = 0; r < flow.rows; ++r) {
 		for (int c = 0; c < flow.cols; ++c) {
-			thetaFlow.at<float>(r, c) = flow.at<cv::Vec2f>(r, c)[0];
-			rFlow.at<float>(r, c) = flow.at<cv::Vec2f>(r, c)[1];
+			rFlow.at<float>(r, c) = flow.at<cv::Vec2f>(r, c)[0];
+			thetaFlow.at<float>(r, c) = flow.at<cv::Vec2f>(r, c)[1];
 		}
 	}
 }

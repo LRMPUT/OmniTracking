@@ -164,7 +164,7 @@ Particle ParticleFilter::processImage(cv::Mat prev, cv::Mat cur)
 
 			cv::imshow("vis", vis);
 
-			cv::waitKey();
+			cv::waitKey(10);
 		}
 
 		return Particle{ (int)meanTheta, (int)meanR, 1.0 };
@@ -206,14 +206,14 @@ float ParticleFilter::calcWeight(cv::Mat rFlowObj,
 	diffSumR /= pixCnt;
 	diffSumTheta /= pixCnt;
 
-	static constexpr double a = 0.1;
+	static constexpr double a = 1.0;
 	return exp(-a * (diffSumR + diffSumTheta));
 }
 
 void ParticleFilter::disturbParticles()
 {
-	normal_distribution<float> normDistTheta(0, 3);
-	normal_distribution<float> normDistR(0, 3);
+	normal_distribution<float> normDistTheta(0, 10);
+	normal_distribution<float> normDistR(0, 10);
 	
 	for (auto it = particles.begin(); it != particles.end(); ++it) {
 		int newR = it->r + normDistR(gen);

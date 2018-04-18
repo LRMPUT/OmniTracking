@@ -85,6 +85,7 @@ int main() {
 			break;
 		}
 	}
+	cv::destroyWindow("pick");
 	cout << "p1 = " << p1 << endl;
 	cout << "p2 = " << p2 << endl;
 
