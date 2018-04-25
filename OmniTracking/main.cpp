@@ -51,7 +51,7 @@ int main() {
 
 	cv::Mat frame1, frame2;
 
-	int framesToSkip = 51;
+	int framesToSkip = 30;
 	for (int i = 0; i < framesToSkip; ++i) {
 		cap >> frame1;
 	}

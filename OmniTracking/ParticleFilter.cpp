@@ -24,6 +24,7 @@ bool ParticleFilter::initFilter(cv::Mat prev, cv::Mat cur, cv::Rect iobj)
 	cv::GaussianBlur(prev, prevBlur, cv::Size(0, 0), 0.8);
 	cv::GaussianBlur(cur, curBlur, cv::Size(0, 0), 0.8);
 
+	particles.clear();
 	for (int p = 0; p < np; ++p) {
 		Particle part;
 		part.theta = uniDistTheta(gen);
@@ -233,6 +234,34 @@ float ParticleFilter::calcWeight(cv::Mat rFlowObj,
 								cv::Mat thetaFlowImg,
 								const Particle & part)
 {
+	double maxRImg = 0;
+	double maxThetaImg = 0;
+	double maxRObj = 0;
+	double maxThetaObj = 0;
+	for (int th = 0; th < thetaFlowObj.rows; ++th) {
+		for (int r = 0; r < thetaFlowObj.cols; ++r) {
+			int partTh = (part.theta - obj.height / 2 + th + 360) % 360;
+			int partR = part.r - obj.width / 2 + r;
+			if (partR >= 0 && partR <= opticalFlow.getMaxR()) {
+
+				maxRImg = max(maxRImg, (double)abs(rFlowImg.at<float>(partTh, partR)));
+				maxRObj = max(maxRObj, (double)abs(rFlowObj.at<float>(th, r)));
+				maxThetaImg = max(maxThetaImg, (double)abs(thetaFlowImg.at<float>(partTh, partR)));
+				maxThetaObj = max(maxThetaObj, (double)abs(thetaFlowObj.at<float>(th, r)));
+			}
+		}
+	}
+
+	/*cout << "maxRImg = " << maxRImg << endl;
+	cout << "maxThetaImg = " << maxThetaImg << endl;
+	cout << "maxRObj = " << maxRObj << endl;
+	cout << "maxThetaObj = " << maxThetaObj << endl;*/
+
+	maxRImg = max(1.0, maxRImg);
+	maxThetaImg = max(1.0, maxThetaImg);
+	maxRObj = max(1.0, maxRObj);
+	maxThetaObj = max(1.0, maxThetaObj);
+
 	double diffSumR = 0;
 	double diffSumTheta = 0;
 	int pixCnt = 0;
@@ -242,8 +271,8 @@ float ParticleFilter::calcWeight(cv::Mat rFlowObj,
 			int partR = part.r - obj.width / 2 + r;
 			if (partR >= 0 && partR <= opticalFlow.getMaxR()) {
 
-				double diffR = rFlowObj.at<float>(th, r) - rFlowImg.at<float>(partTh, partR);
-				double diffTheta = thetaFlowObj.at<float>(th, r) - thetaFlowImg.at<float>(partTh, partR);
+				double diffR = rFlowObj.at<float>(th, r)/maxRObj - rFlowImg.at<float>(partTh, partR)/maxRImg;
+				double diffTheta = thetaFlowObj.at<float>(th, r)/maxThetaObj - thetaFlowImg.at<float>(partTh, partR)/maxThetaImg;
 
 				diffSumR += diffR * diffR;
 				diffSumTheta += diffTheta * diffTheta;
