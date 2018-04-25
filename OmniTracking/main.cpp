@@ -63,7 +63,7 @@ int main() {
 	cout << "fw = " << fw << endl;
 	cout << "fh = " << fh << endl;
 	
-	ParticleFilter pf(fw, fh, fw / 2, fh / 2, 1000);
+	ParticleFilter pf(fw, fh, fw / 2, fh / 2, 2000);
 
 	cv::Mat frame2Polar = pf.getPolar(frame2);
 
@@ -97,7 +97,7 @@ int main() {
 	cv::Mat prev = frame2;
 
 	cv::namedWindow("image cart", 1);
-	cv::namedWindow("image polar", 2);
+	//cv::namedWindow("image polar", 2);
 	for (;;)
 	{
 		cv::Mat frame;
@@ -106,7 +106,7 @@ int main() {
 			cv::Mat polar = pf.getPolar(frame);
 
 			cv::imshow("image cart", frame);
-			cv::imshow("image polar", polar);
+			//cv::imshow("image polar", polar);
 
 			pf.processImage(prev, frame);
 			if (cv::waitKey(30) >= 0) {

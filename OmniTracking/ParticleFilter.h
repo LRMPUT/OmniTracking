@@ -30,6 +30,15 @@ private:
 					cv::Mat thetaFlowImg,
 					const Particle &part);
 
+	void getFlowObj(cv::Mat &rFlowObj,
+					cv::Mat &thetaFlowObj,
+					const cv::Mat &rFlowImg,
+					const cv::Mat &thetaFlowImg,
+					const cv::Rect &obj);
+
+	void predict(const cv::Mat &rFlowImg,
+				 const cv::Mat &thetaFlowImg);
+
 	void disturbParticles();
 
 	void redraw();

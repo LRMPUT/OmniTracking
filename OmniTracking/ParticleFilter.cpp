@@ -15,7 +15,12 @@ ParticleFilter::ParticleFilter(int iw, int ih, int icx, int icy, int inp)
 bool ParticleFilter::initFilter(cv::Mat prev, cv::Mat cur, cv::Rect iobj)
 {
 	uniform_int_distribution<int> uniDistTheta(0, 360 - 1);
-	uniform_int_distribution<int> uniDistR(0, opticalFlow.getMaxR());
+	uniform_int_distribution<int> uniDistR(obj.width / 2, opticalFlow.getMaxR() - (obj.width + 1) / 2);
+	
+	cv::Mat prevBlur;
+	cv::Mat curBlur;
+	cv::GaussianBlur(prev, prevBlur, cv::Size(0, 0), 0.8);
+	cv::GaussianBlur(cur, curBlur, cv::Size(0, 0), 0.8);
 
 	for (int p = 0; p < np; ++p) {
 		Particle part;
@@ -26,7 +31,7 @@ bool ParticleFilter::initFilter(cv::Mat prev, cv::Mat cur, cv::Rect iobj)
 	}
 	
 	cv::Mat rFlow, thetaFlow;
-	opticalFlow.getFlowCart(prev, cur, rFlow, thetaFlow);
+	opticalFlow.getFlowCart(prevBlur, curBlur, rFlow, thetaFlow);
 
 	//double minValR, maxValR;
 	//cv::minMaxIdx(abs(rFlow), &minValR, &maxValR);
@@ -54,8 +59,13 @@ bool ParticleFilter::initFilter(cv::Mat prev, cv::Mat cur, cv::Rect iobj)
 
 Particle ParticleFilter::processImage(cv::Mat prev, cv::Mat cur)
 {
+	cv::Mat prevBlur;
+	cv::Mat curBlur;
+	cv::GaussianBlur(prev, prevBlur, cv::Size(0, 0), 0.8);
+	cv::GaussianBlur(cur, curBlur, cv::Size(0, 0), 0.8);
+
 	cv::Mat rFlow, thetaFlow;
-	opticalFlow.getFlowCart(prev, cur, rFlow, thetaFlow);
+	opticalFlow.getFlowCart(prevBlur, curBlur, rFlow, thetaFlow);
 
 	//double minValR, maxValR;
 	//cv::minMaxIdx(abs(rFlow), &minValR, &maxValR);
@@ -69,7 +79,10 @@ Particle ParticleFilter::processImage(cv::Mat prev, cv::Mat cur)
 	cout << "meanR = " << meanR << " meanTheta = " << meanTheta << endl;
 
 	if (meanR(0) > 0.05 && meanTheta(0) > 0.05) {
+		predict(rFlow, thetaFlow);
+
 		disturbParticles();
+
 
 		Particle bestParticle;
 		float bestWeight = 0;
@@ -112,6 +125,10 @@ Particle ParticleFilter::processImage(cv::Mat prev, cv::Mat cur)
 		// mean
 		double meanX = 0;
 		double meanY = 0;
+		vector<double> xVals;
+		vector<double> yVals;
+		vector<double> rVals;
+		vector<double> thetaVals;
 		for (auto it = particles.begin(); it != particles.end(); ++it) {
 			//cout << "r = " << it->r << ", theta = " << it->theta << endl;
 
@@ -119,6 +136,10 @@ Particle ParticleFilter::processImage(cv::Mat prev, cv::Mat cur)
 			int yVal = opticalFlow.yCoord(it->r, it->theta);
 			meanX += xVal;
 			meanY += yVal;
+			xVals.push_back(xVal);
+			yVals.push_back(yVal);
+			rVals.push_back(it->r);
+			thetaVals.push_back(it->theta);
 		}
 		meanX /= particles.size();
 		meanY /= particles.size();
@@ -136,6 +157,19 @@ Particle ParticleFilter::processImage(cv::Mat prev, cv::Mat cur)
 		double meanR = opticalFlow.rCoord(meanX, meanY);
 		double meanTheta = opticalFlow.thetaCoord(meanX, meanY);
 
+		/*sort(xVals.begin(), xVals.end());
+		sort(yVals.begin(), yVals.end());
+		double medianX = xVals[xVals.size() / 2];
+		double medianY = yVals[yVals.size() / 2];
+		double medianR = opticalFlow.rCoord(medianX, medianY);
+		double medianTheta = opticalFlow.thetaCoord(medianX, medianY);*/
+		sort(rVals.begin(), rVals.end());
+		sort(thetaVals.begin(), thetaVals.end());
+		double medianR = rVals[rVals.size() / 2];
+		double medianTheta = thetaVals[thetaVals.size() / 2];
+
+		cout << "medianR = " << medianR << endl;
+		cout << "medianTheta = " << medianTheta << endl;
 		cout << "meanX = " << meanX << endl;
 		cout << "meanY = " << meanY << endl;
 		cout << "varX = " << varX << endl;
@@ -162,9 +196,16 @@ Particle ParticleFilter::processImage(cv::Mat prev, cv::Mat cur)
 
 			cv::rectangle(vis, obj, cv::Scalar(0, 0, 255));
 
+			cv::Rect medianObj(medianR - obj.width/2,
+							medianTheta - obj.height/2,
+							obj.width,
+							obj.height);
+
+			cv::rectangle(vis, medianObj, cv::Scalar(0, 255, 0));
+
 			cv::imshow("vis", vis);
 
-			cv::waitKey(10);
+			cv::waitKey();
 		}
 
 		return Particle{ (int)meanTheta, (int)meanR, 1.0 };
@@ -189,7 +230,7 @@ float ParticleFilter::calcWeight(cv::Mat rFlowObj,
 	double diffSumTheta = 0;
 	int pixCnt = 0;
 	for (int th = 0; th < thetaFlowObj.rows; ++th) {
-		for (int r = 0; r < rFlowObj.cols; ++r) {
+		for (int r = 0; r < thetaFlowObj.cols; ++r) {
 			int partTh = (part.theta - obj.height / 2 + th + 360) % 360;
 			int partR = part.r - obj.width / 2 + r;
 			if (partR >= 0 && partR <= opticalFlow.getMaxR()) {
@@ -210,10 +251,58 @@ float ParticleFilter::calcWeight(cv::Mat rFlowObj,
 	return exp(-a * (diffSumR + diffSumTheta));
 }
 
+void ParticleFilter::getFlowObj(cv::Mat & rFlowObj,
+								cv::Mat & thetaFlowObj,
+								const cv::Mat & rFlowImg,
+								const cv::Mat & thetaFlowImg,
+								const cv::Rect & curObj)
+{
+	for (int th = 0; th < thetaFlowObj.rows; ++th) {
+		for (int r = 0; r < thetaFlowObj.cols; ++r) {
+			int partTh = (curObj.y - th + 360) % 360;
+			int partR = curObj.x + r;
+			if (partR >= 0 && partR <= opticalFlow.getMaxR()) {
+				rFlowObj.at<float>(th, r) = rFlowImg.at<float>(partTh, partR);
+				thetaFlowObj.at<float>(th, r) = thetaFlowImg.at<float>(partTh, partR);
+			}
+		}
+	}
+}
+
+void ParticleFilter::predict(const cv::Mat &rFlowImg,
+							const cv::Mat &thetaFlowImg)
+{
+	for (auto it = particles.begin(); it != particles.end(); ++it) {
+		double meanR = 0;
+		double meanTheta = 0;
+		int pixCnt = 0;
+		for (int th = 0; th < obj.height; ++th) {
+			for (int r = 0; r < obj.width; ++r) {
+				int partTh = (it->theta - obj.height / 2 + th + 360) % 360;
+				int partR = it->r - obj.width / 2 + r;
+				if (partR >= 0 && partR <= opticalFlow.getMaxR()) {
+					meanR += rFlowImg.at<float>(partTh, partR);
+					meanTheta += thetaFlowImg.at<float>(partTh, partR);
+					++pixCnt;
+				}
+			}
+		}
+		meanR /= pixCnt;
+		meanTheta /= pixCnt;
+		/*if (abs(meanR) > 0.1 || abs(meanTheta) > 0.1) {
+			cout << "meanR = " << meanR << endl;
+			cout << "meanTheta = " << meanTheta << endl;
+		}*/
+
+		it->r += 5 * meanR;
+		it->theta += 5 * meanTheta;
+	}
+}
+
 void ParticleFilter::disturbParticles()
 {
-	normal_distribution<float> normDistTheta(0, 10);
-	normal_distribution<float> normDistR(0, 10);
+	normal_distribution<float> normDistTheta(0, 6);
+	normal_distribution<float> normDistR(0, 6);
 	
 	for (auto it = particles.begin(); it != particles.end(); ++it) {
 		int newR = it->r + normDistR(gen);
@@ -221,6 +310,8 @@ void ParticleFilter::disturbParticles()
 
 		newR = max(obj.width/2, newR);
 		newR = min(opticalFlow.getMaxR() - (obj.width + 1) / 2, newR);
+		/*newR = max(0, newR);
+		newR = min(opticalFlow.getMaxR(), newR);*/
 		newTheta = (newTheta + 360) % 360;
 
 		it->r = newR;
@@ -233,6 +324,9 @@ void ParticleFilter::redraw()
 	uniform_real_distribution<float> uniRealDist(0.0, 1.0);
 	uniform_int_distribution<int> uniIntDist(0, particles.size() - 1);
 
+	uniform_int_distribution<int> uniDistTheta(0, 360 - 1);
+	uniform_int_distribution<int> uniDistR(obj.width / 2, opticalFlow.getMaxR() - (obj.width + 1) / 2);
+
 	vector<Particle> newParticles;
 	{
 		int idx = uniIntDist(gen);
@@ -241,7 +335,8 @@ void ParticleFilter::redraw()
 		for (int e = 0; e < particles.size(); e++) {
 			maxW = max(maxW, particles[e].weight);
 		}
-		for (int e = 0; e < particles.size(); e++) {
+		int nDrawPart = 0.95 * particles.size();
+		for (int e = 0; e < nDrawPart; e++) {
 			double w = particles[idx].weight;
 			beta += 2 * maxW*uniRealDist(gen);
 			while (w < beta) {
@@ -250,6 +345,14 @@ void ParticleFilter::redraw()
 				w = particles[idx].weight;
 			}
 			newParticles.push_back(particles[idx]);
+		}
+
+		for (int p = 0; p < particles.size() - nDrawPart; ++p) {
+			Particle part;
+			part.theta = uniDistTheta(gen);
+			part.r = uniDistR(gen);
+			part.weight = 1.0 / particles.size();
+			newParticles.push_back(part);
 		}
 	}
 	newParticles.swap(particles);
