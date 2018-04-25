@@ -2,9 +2,11 @@
 #include <chrono>
 
 #include "ParticleFilter.h"
+#include "Windows.h"
+
 
 using namespace std;
-
+int suma_roznic = 0;
 ParticleFilter::ParticleFilter(int iw, int ih, int icx, int icy, int inp)
  : opticalFlow(iw, ih, icx, icy), np(inp)
 {
@@ -86,6 +88,7 @@ Particle ParticleFilter::processImage(cv::Mat prev, cv::Mat cur)
 
 		Particle bestParticle;
 		float bestWeight = 0;
+		int a = GetTickCount();
 		for (auto it = particles.begin(); it != particles.end(); ++it) {
 			float w = calcWeight(rFlowObj, thetaFlowObj, rFlow, thetaFlow, *it);
 			it->weight = w;
@@ -94,7 +97,11 @@ Particle ParticleFilter::processImage(cv::Mat prev, cv::Mat cur)
 				bestParticle = *it;
 			}
 		}
-
+		int b = GetTickCount();
+		int roznica = b - a;
+		cout << "roznica: " << roznica << endl;
+		suma_roznic = suma_roznic + roznica;
+		cout << "suma roznic:" << suma_roznic << endl;
 
 		//for (auto it = particles.begin(); it != particles.end(); ++it) {
 
@@ -205,7 +212,7 @@ Particle ParticleFilter::processImage(cv::Mat prev, cv::Mat cur)
 
 			cv::imshow("vis", vis);
 
-			cv::waitKey();
+			cv::waitKey(10);
 		}
 
 		return Particle{ (int)meanTheta, (int)meanR, 1.0 };
@@ -229,8 +236,8 @@ float ParticleFilter::calcWeight(cv::Mat rFlowObj,
 	double diffSumR = 0;
 	double diffSumTheta = 0;
 	int pixCnt = 0;
-	for (int th = 0; th < thetaFlowObj.rows; ++th) {
-		for (int r = 0; r < thetaFlowObj.cols; ++r) {
+	for (int th = 0; th < thetaFlowObj.rows; th=th+5) {
+		for (int r = 0; r < thetaFlowObj.cols; r=r+5) {
 			int partTh = (part.theta - obj.height / 2 + th + 360) % 360;
 			int partR = part.r - obj.width / 2 + r;
 			if (partR >= 0 && partR <= opticalFlow.getMaxR()) {

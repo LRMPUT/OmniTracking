@@ -3,6 +3,7 @@
 #include <opencv2/opencv.hpp>
 
 #include "ParticleFilter.h"
+#include "Windows.h"
 
 using namespace std;
 
@@ -42,7 +43,7 @@ void mouseHandler(int event, int x, int y, int flags, void* param) {
 int main() {
 	
 
-	cv::VideoCapture cap("zyrafa.avi"); // open the default camera
+	cv::VideoCapture cap("test2.avi"); // open the default camera
 	if (!cap.isOpened()) {
 		cout << "video not opened" << endl;
 		return -1;
@@ -109,6 +110,7 @@ int main() {
 			//cv::imshow("image polar", polar);
 
 			pf.processImage(prev, frame);
+
 			if (cv::waitKey(30) >= 0) {
 				break;
 			}
@@ -118,4 +120,5 @@ int main() {
 			break;
 		}
 	}
+	system("pause");
 }
