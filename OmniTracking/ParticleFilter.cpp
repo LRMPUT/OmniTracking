@@ -364,7 +364,7 @@ float ParticleFilter::calcWeight(cv::Mat rFlowObj,
 	diffSumR /= pixCnt;
 	diffSumTheta /= pixCnt;
 
-	static constexpr double a = 1.0;
+	static constexpr double a = 10.0;
 	return exp(-a * (diffSumR + diffSumTheta));
 }
 

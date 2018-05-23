@@ -43,7 +43,7 @@ void mouseHandler(int event, int x, int y, int flags, void* param) {
 int main() {
 	
 
-	cv::VideoCapture cap("test4.avi"); // open the default camera
+	cv::VideoCapture cap("test1.avi"); // open the default camera
 	if (!cap.isOpened()) {
 		cout << "video not opened" << endl;
 		return -1;
