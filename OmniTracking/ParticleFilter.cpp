@@ -1,12 +1,17 @@
 
 #include <chrono>
-
 #include "ParticleFilter.h"
 #include "Windows.h"
 
 
 using namespace std;
+using namespace cv;
+
 int suma_roznic = 0;
+
+Mat rFlowColor;
+Mat thetaFlowColor;
+
 ParticleFilter::ParticleFilter(int iw, int ih, int icx, int icy, int inp)
  : opticalFlow(iw, ih, icx, icy), np(inp)
 {
@@ -18,7 +23,7 @@ bool ParticleFilter::initFilter(cv::Mat prev, cv::Mat cur, cv::Rect iobj)
 {
 	uniform_int_distribution<int> uniDistTheta(0, 360 - 1);
 	uniform_int_distribution<int> uniDistR(obj.width / 2, opticalFlow.getMaxR() - (obj.width + 1) / 2);
-	
+
 	cv::Mat prevBlur;
 	cv::Mat curBlur;
 	cv::GaussianBlur(prev, prevBlur, cv::Size(0, 0), 0.8);
@@ -32,7 +37,7 @@ bool ParticleFilter::initFilter(cv::Mat prev, cv::Mat cur, cv::Rect iobj)
 		part.weight = 1.0 / np;
 		particles.push_back(part);
 	}
-	
+
 	cv::Mat rFlow, thetaFlow;
 	opticalFlow.getFlowCart(prevBlur, curBlur, rFlow, thetaFlow);
 
@@ -58,6 +63,33 @@ bool ParticleFilter::initFilter(cv::Mat prev, cv::Mat cur, cv::Rect iobj)
 		return false;
 	}
 
+}
+
+Mat kolorowanie(Mat macierz)
+{
+	Mat macierz_kolorowa;
+	macierz_kolorowa.create(macierz.rows, macierz.cols, CV_8UC3);
+
+	for (int i = 0; i < macierz.rows; i++)
+	{
+		for (int j = 0; j < macierz.cols; j++)
+		{
+			if (macierz.at<float>(i, j) <= 0)
+			{
+				macierz_kolorowa.at<Vec3b>(i, j).val[0] = -(float)macierz.at<float>(i, j) / 1.5 * 255;
+				macierz_kolorowa.at<Vec3b>(i, j).val[1] = 0;
+				macierz_kolorowa.at<Vec3b>(i, j).val[2] = 0;
+			}
+			else
+			{
+				macierz_kolorowa.at<Vec3b>(i, j).val[0] = 0;
+				macierz_kolorowa.at<Vec3b>(i, j).val[1] = 0;
+				macierz_kolorowa.at<Vec3b>(i, j).val[2] = (float)macierz.at<float>(i, j) / 1.5 * 255;
+			}
+		}
+	}
+
+	return macierz_kolorowa;
 }
 
 Particle ParticleFilter::processImage(cv::Mat prev, cv::Mat cur)
@@ -122,11 +154,60 @@ Particle ParticleFilter::processImage(cv::Mat prev, cv::Mat cur)
 		//	cv::waitKey();
 		//}
 
+		rFlowColor.create(rFlow.rows, rFlow.cols, CV_8UC3);
+		
+		/*for (int i = 0; i < rFlow.rows; i++)
+		{
+			for (int j = 0; j < rFlow.cols; j++)
+			{
+				if (rFlow.at<float>(i, j)<=0)
+				{
+					rFlowColor.at<Vec3b>(i, j).val[0] = 0;
+					rFlowColor.at<Vec3b>(i, j).val[1] = -rFlow.at<float>(i, j) / 2 * 255;
+					rFlowColor.at<Vec3b>(i, j).val[2] = 0;
+				}
+				else
+				{
+					rFlowColor.at<Vec3b>(i, j).val[0] = 0;
+					rFlowColor.at<Vec3b>(i, j).val[1] = 0;
+					rFlowColor.at<Vec3b>(i, j).val[2] = rFlow.at<float>(i, j)/2*255;
+				}
+			}
+		}
 
-		cv::imshow("rFlow", rFlow);
-		cv::imshow("thetaFlow", thetaFlow);
-		cv::imshow("rFlowObj", rFlowObj);
-		cv::imshow("thetaFlowObj", thetaFlowObj);
+		thetaFlowColor.create(thetaFlow.rows, thetaFlow.cols, CV_8UC3);
+
+		for (int i = 0; i < thetaFlow.rows; i++)
+		{
+			for (int j = 0; j < thetaFlow.cols; j++)
+			{
+				if (thetaFlow.at<float>(i, j) <= 0)
+				{
+					thetaFlowColor.at<Vec3b>(i, j).val[0] = 0;
+					thetaFlowColor.at<Vec3b>(i, j).val[1] = -(float)thetaFlow.at<float>(i, j) / 1.5 * 255;
+					thetaFlowColor.at<Vec3b>(i, j).val[2] = 0;
+				}
+				else
+				{
+					thetaFlowColor.at<Vec3b>(i, j).val[0] = 0;
+					thetaFlowColor.at<Vec3b>(i, j).val[1] = 0;
+					thetaFlowColor.at<Vec3b>(i, j).val[2] = (float)thetaFlow.at<float>(i, j) / 1.5 * 255;
+				}
+			}
+		}*/
+
+		//cv::imshow("rFlow", rFlow);
+		/*cv::imshow("thetaFlowColor", thetaFlowColor);*/
+		Mat thetaKolorowa = kolorowanie(thetaFlow);
+		Mat rKolorowa = kolorowanie(rFlow);
+		Mat rWzorzec = kolorowanie(rFlowObj);
+		Mat thetaWzorzec = kolorowanie(thetaFlowObj);
+		cv::imshow("thetaWzorzec", thetaWzorzec);
+		imshow("thetaFlowColor", thetaKolorowa);
+		cv::imshow("rWzorzec", rWzorzec);
+		imshow("rFlowColor", rKolorowa);
+		//cv::imshow("rFlowColor", rFlowColor);
+		
 
 		redraw();
 
@@ -265,8 +346,8 @@ float ParticleFilter::calcWeight(cv::Mat rFlowObj,
 	double diffSumR = 0;
 	double diffSumTheta = 0;
 	int pixCnt = 0;
-	for (int th = 0; th < thetaFlowObj.rows; th=th+5) {
-		for (int r = 0; r < thetaFlowObj.cols; r=r+5) {
+	for (int th = 0; th < thetaFlowObj.rows; th=th+1) {
+		for (int r = 0; r < thetaFlowObj.cols; r=r+1) {
 			int partTh = (part.theta - obj.height / 2 + th + 360) % 360;
 			int partR = part.r - obj.width / 2 + r;
 			if (partR >= 0 && partR <= opticalFlow.getMaxR()) {
