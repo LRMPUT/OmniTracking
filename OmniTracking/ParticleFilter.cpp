@@ -11,6 +11,9 @@ int suma_roznic = 0;
 
 Mat rFlowColor;
 Mat thetaFlowColor;
+float x_zielonckiego;
+float y_zielonckiego;
+int licznik = 0;
 
 ParticleFilter::ParticleFilter(int iw, int ih, int icx, int icy, int inp)
  : opticalFlow(iw, ih, icx, icy), np(inp)
@@ -114,7 +117,7 @@ Particle ParticleFilter::processImage(cv::Mat prev, cv::Mat cur)
 	cout << "meanR = " << meanR << " meanTheta = " << meanTheta << endl;
 
 	if (meanR(0) > 0.05 && meanTheta(0) > 0.05) {
-		predict(rFlow, thetaFlow);
+		//predict(rFlow, thetaFlow);
 
 		disturbParticles();
 
@@ -268,6 +271,7 @@ Particle ParticleFilter::processImage(cv::Mat prev, cv::Mat cur)
 		if (varX < 100 && varY < 100) {
 			int objRSize = obj.width;
 			int objThetaSize = obj.height;
+
 			obj = cv::Rect(meanR - objRSize / 2,
 				meanTheta - objThetaSize / 2,
 				objRSize,
@@ -289,6 +293,21 @@ Particle ParticleFilter::processImage(cv::Mat prev, cv::Mat cur)
 							medianTheta - obj.height/2,
 							obj.width,
 							obj.height);
+
+			//licznik++;
+			//if(licznik == 15)
+			//{ 
+			//	x_zielonckiego = medianObj.x;
+			//	y_zielonckiego = medianObj.y;
+
+			//	Mat rFlowObj1(rFlow, Rect(x_zielonckiego, y_zielonckiego, obj.width, obj.height));
+			//	rFlowObj = rFlowObj1.clone();
+
+			//	Mat rThetaObj1(thetaFlow, Rect(x_zielonckiego, y_zielonckiego, obj.width, obj.height));
+			//	thetaFlowObj = rThetaObj1.clone();
+			//	licznik = 0;
+			//}
+
 
 			cv::rectangle(vis, medianObj, cv::Scalar(0, 255, 0));
 
@@ -346,8 +365,8 @@ float ParticleFilter::calcWeight(cv::Mat rFlowObj,
 	double diffSumR = 0;
 	double diffSumTheta = 0;
 	int pixCnt = 0;
-	for (int th = 0; th < thetaFlowObj.rows; th=th+1) {
-		for (int r = 0; r < thetaFlowObj.cols; r=r+1) {
+	for (int th = 0; th < thetaFlowObj.rows; th=th+2) {
+		for (int r = 0; r < thetaFlowObj.cols; r=r+2) {
 			int partTh = (part.theta - obj.height / 2 + th + 360) % 360;
 			int partR = part.r - obj.width / 2 + r;
 			if (partR >= 0 && partR <= opticalFlow.getMaxR()) {
